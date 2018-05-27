@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-
 from .LineClient import LineClient
 from types import *
-from ..lib.curve.ttypes import OpType
-from ..Net.LineServer import url
+from ..LineThrift.ttypes import OpType
+from .LineServer import url
 
+try:
+    from thrift.protocol import fastbinary
+except:
+    fastbinary = None
 
 class LineTracer(object):
     OpInterrupt = {}
@@ -16,7 +19,7 @@ class LineTracer(object):
                 "You need to set LineClient instance to initialize LineTracer")
 
         self.client = client
-        self.client.endPoint(url.LONG_POLLING)
+        self.client.endPoint(url.LINE_POLL_QUERY_PATH_FIR)
 
     def addOpInterruptWithDict(self, OpInterruptDict):
         """To add Operation with Callback function {Optype.NOTIFIED_INTO_GROUP: func}"""
@@ -27,10 +30,7 @@ class LineTracer(object):
 
     def execute(self):
         try:
-            operations = self.client.fetchOperation(self.client.revision, 10)
-            #print "======================================================="
-            # print operations
-            #print "======================================================="
+            operations = self.client.fetchOperation(self.client.revision, 1)
         except EOFError:
             return
         except KeyboardInterrupt:
@@ -40,9 +40,6 @@ class LineTracer(object):
 
         for op in operations:
             if op.type in self.OpInterrupt.keys():
-                #print "======================================================="
-                #print str(op.type) + "[" + str(op) + "]"
-                #print "======================================================="
                 self.OpInterrupt[op.type](op)
 
             self.client.revision = max(op.revision, self.client.revision)
